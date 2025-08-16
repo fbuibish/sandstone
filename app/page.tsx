@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useMemo, useState } from 'react';
 
 type APIDoc = {
@@ -12,12 +11,7 @@ type APIDoc = {
   updatedAt: string;
 };
 
-type SearchResult = {
-  id: string;
-  name: string;
-  snippet: string;
-  score?: number;
-};
+type SearchHit = { docId: string; name: string; snippetHtml: string };
 
 export default function Page() {
   const [docs, setDocs] = useState<APIDoc[]>([]);
@@ -27,8 +21,7 @@ export default function Page() {
 
   const [q, setQ] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [apiPreview, setApiPreview] = useState('');
+  const [results, setResults] = useState<SearchHit[]>([]);
 
   async function loadDocs() {
     const r = await fetch('/api/documents');
@@ -66,10 +59,8 @@ export default function Page() {
         if (!r.ok) throw new Error(text || 'upload failed');
         return JSON.parse(text) as APIDoc;
       });
-      const settled = await Promise.allSettled(tasks);
-      const succeeded = settled.filter(x => x.status === 'fulfilled').length;
-      const failed = settled.length - succeeded;
-      setUploadMsg(`${succeeded} uploaded, ${failed} failed.`);
+      await Promise.allSettled(tasks);
+      setUploadMsg('Upload complete.');
       setPending([]);
       await loadDocs();
     } catch (e) {
@@ -84,17 +75,14 @@ export default function Page() {
     setIsSearching(true);
     setResults([]);
 
-    const payload = { q, k: 10 };
-    setApiPreview(JSON.stringify(payload, null, 2));
-
-    const r = await fetch('/api/search', {
+    const payload = { q, k: 200 };
+    const r = await fetch('/api/documents/search', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const data = await r.json();
     setResults(Array.isArray(data) ? data : []);
-
     setIsSearching(false);
   }
 
@@ -107,8 +95,8 @@ export default function Page() {
     <main className="mx-auto max-w-5xl p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Redline Playground</h1>
       <p className="text-sm text-gray-500 -mt-1">
-        Left: upload & list. Right: search across all uploaded documents.
-        Results below.
+        Left: upload & list. Right: search across all uploaded documents. One
+        result per occurrence.
       </p>
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -135,6 +123,7 @@ export default function Page() {
                 : `Upload${pending.length ? ` ${pending.length}` : ''}`}
             </button>
           </div>
+
           {!!pending.length && (
             <div className="mt-3">
               <p className="text-xs text-gray-500 mb-1">Pending:</p>
@@ -156,9 +145,6 @@ export default function Page() {
               </ul>
             </div>
           )}
-          {uploadMsg && (
-            <p className="text-xs text-gray-600 mt-2">{uploadMsg}</p>
-          )}
 
           <hr className="my-4" />
 
@@ -168,7 +154,6 @@ export default function Page() {
               {docs.length} files • {(totalSize / 1024).toFixed(1)} KB
             </span>
           </div>
-
           <ul className="divide-y">
             {docs.length === 0 ? (
               <li className="py-2 text-sm text-gray-500">
@@ -230,12 +215,6 @@ export default function Page() {
               </span>
             </div>
           </form>
-
-          {apiPreview && (
-            <pre className="mt-3 bg-gray-50 p-3 rounded-xl text-xs overflow-auto max-h-40 text-black">
-              {apiPreview}
-            </pre>
-          )}
         </div>
       </section>
 
@@ -244,7 +223,7 @@ export default function Page() {
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-medium">Results</h2>
           <span className="text-sm text-gray-500">
-            {results.length} match{results.length === 1 ? '' : 'es'}
+            {results.length} hit{results.length === 1 ? '' : 's'}
           </span>
         </div>
         {results.length === 0 ? (
@@ -256,12 +235,10 @@ export default function Page() {
             {results.map((r, i) => (
               <li key={i} className="p-3 rounded-xl bg-gray-50 text-black">
                 <p className="text-xs text-gray-500 mb-1">{r.name}</p>
-                <p className="text-sm whitespace-pre-wrap">{r.snippet}</p>
-                {typeof r.score === 'number' && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    score: {r.score.toFixed(3)}
-                  </p>
-                )}
+                <p
+                  className="text-sm whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{ __html: r.snippetHtml }}
+                />
               </li>
             ))}
           </ul>
@@ -269,8 +246,8 @@ export default function Page() {
       </section>
 
       <footer className="text-xs text-gray-500">
-        Search now calls <code>/api/search</code>. Text search works for plain
-        text uploads; PDFs/DOCX will need extractors next.
+        Each match shows ±50 chars with the hit <mark>highlighted</mark>. Use
+        quotes for phrase search (e.g., &quot;net 30&quot;).
       </footer>
     </main>
   );
