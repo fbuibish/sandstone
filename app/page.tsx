@@ -76,7 +76,7 @@ export default function Page() {
       const tasks = pending.map(async file => {
         const fd = new FormData();
         fd.append('file', file);
-        const r = await fetch('/api/upload', { method: 'POST', body: fd });
+        const r = await fetch('/api/documents', { method: 'POST', body: fd });
         const text = await r.text();
         if (!r.ok) throw new Error(text || 'upload failed');
         return JSON.parse(text) as APIDoc;
@@ -99,12 +99,13 @@ export default function Page() {
     setResults([]);
     setChecked({});
 
-    const payload = { q, k: 500 }; // ask for many; UI will filter/limit visually if needed
-    const r = await fetch('/api/documents/search', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
+    // Build query parameters
+    const searchParams = new URLSearchParams({
+      q,
+      limit: '500', // ask for many; UI will filter/limit visually if needed
     });
+
+    const r = await fetch(`/api/documents/search?${searchParams}`);
     const data = await r.json();
     const list: UIHit[] = Array.isArray(data)
       ? data.map((h: SearchHit, index: number) => ({
@@ -129,18 +130,6 @@ export default function Page() {
       console.log('New state:', newState);
       return newState;
     });
-  }
-  function toggleAll() {
-    const allSelected = results.length && results.every(h => checked[h.key]);
-    if (allSelected) {
-      setChecked({});
-    } else {
-      const next: Record<string, boolean> = {};
-      results.forEach(h => {
-        next[h.key] = true;
-      });
-      setChecked(next);
-    }
   }
 
   // Apply selected hits as PATCH /documents/{id}
@@ -427,9 +416,9 @@ export default function Page() {
       </section>
 
       <footer className="text-xs text-gray-500">
-        This page posts to <code>/api/upload</code>, <code>/api/documents</code>
-        , <code>/api/documents/search</code>, and per-document{' '}
-        <code>PATCH /api/documents/{'{id}'}</code>.
+        This page uses <code>POST /api/documents</code> (for uploads and
+        document creation), <code>GET /api/documents/search</code> (for search),
+        and <code>PATCH /api/documents/{'{id}'}</code> (for edits).
       </footer>
     </main>
   );

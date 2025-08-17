@@ -1,15 +1,22 @@
 import { searchDocuments } from '../../../../lib/documents/search';
 
-export async function POST(
+export async function GET(
   req: Request,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
-  const { q, limit, offset } = await req.json().catch(() => ({}));
+  const { searchParams } = new URL(req.url);
+  const q = searchParams.get('q');
+  const limit = searchParams.get('limit');
+  const offset = searchParams.get('offset');
+
   if (typeof q !== 'string' || !q.trim()) {
-    return Response.json({ error: 'q required', code: 400 }, { status: 400 });
+    return Response.json(
+      { error: 'q query parameter required', code: 400 },
+      { status: 400 }
+    );
   }
 
-  const { documentId } = params;
+  const { documentId } = await params;
   if (!documentId) {
     return Response.json(
       { error: 'documentId required', code: 400 },

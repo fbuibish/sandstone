@@ -118,3 +118,144 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## API Endpoints
+
+This application provides several REST API endpoints for document management and search functionality. Below are sample requests for each endpoint:
+
+### Health Check
+
+**GET** `/api/health`
+
+Check if the API is running.
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "ts": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### Documents
+
+**GET** `/api/documents`
+
+Get all documents, ordered by creation date (newest first).
+
+```bash
+curl http://localhost:3000/api/documents
+```
+
+**POST** `/api/documents`
+
+Create a document. This endpoint supports two modes:
+
+1. **File Upload** (multipart/form-data) - Upload a file and create a document with text extraction (supports plain text and PDF files)
+2. **Logical Document** (application/json) - Create a logical document without file upload
+
+```bash
+# Upload a text file
+curl -X POST http://localhost:3000/api/documents \
+  -F "file=@example.txt"
+
+# Upload a PDF file
+curl -X POST http://localhost:3000/api/documents \
+  -F "file=@document.pdf"
+
+# Create a logical document
+curl -X POST http://localhost:3000/api/documents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Document",
+    "mimeType": "text/plain",
+    "sizeBytes": 1024
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "example.txt",
+  "mimeType": "text/plain",
+  "sizeBytes": 1024,
+  "storageKey": "123e4567-e89b-12d3-a456-426614174000_example.txt",
+  "version": 1,
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "updatedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### Document Search
+
+**GET** `/api/documents/search`
+
+Search across all documents for text content.
+
+```bash
+curl "http://localhost:3000/api/documents/search?q=search%20term&limit=10&offset=0"
+
+# Or with simpler query
+curl "http://localhost:3000/api/documents/search?q=hello"
+```
+
+### Document Operations
+
+**PATCH** `/api/documents/{documentId}`
+
+Edit a document's text content using position-based replacements.
+
+```bash
+curl -X PATCH http://localhost:3000/api/documents/62557b19-b120-4471-8fb3-97af0a8e9204 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "changes": [
+      {
+        "operation": "replace",
+        "range": { "start": 10, "end": 20 },
+        "text": "new content"
+      }
+    ]
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "version": 2,
+  "updatedText": "...",
+  "changesApplied": 1
+}
+```
+
+### Document-Specific Search
+
+**GET** `/api/documents/{documentId}/search`
+
+Search within a specific document.
+
+```bash
+curl "http://localhost:3000/api/documents/123e4567-e89b-12d3-a456-426614174000/search?q=search%20term&limit=25&offset=0"
+
+curl "http://localhost:3000/api/documents/62557b19-b120-4471-8fb3-97af0a8e9204/search?q=search%20term&limit=25&offset=0"
+
+# Or with simpler query
+curl "http://localhost:3000/api/documents/123e4567-e89b-12d3-a456-426614174000/search?q=hello"
+```
+
+### Response Format Notes
+
+- All search endpoints return results with pagination support
+- Document IDs are UUIDs
+- File uploads support automatic text extraction for plain text and PDF files
+- Document editing uses position-based replacements applied right-to-left to maintain index stability
+- All timestamps are in ISO 8601 format
