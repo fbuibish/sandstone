@@ -56,16 +56,16 @@ function applyPositionReplacements(source: string, changes: Change[]) {
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
-    const id = params.id;
+    const { documentId } = await params;
     const body = await req.json().catch(() => ({}));
     const { changes } = body as { changes: Change[] };
 
     // Ensure doc exists
     const doc = await prisma.document.findUnique({
-      where: { id },
+      where: { id: documentId },
       select: { id: true, version: true },
     });
     if (!doc) {
@@ -74,7 +74,7 @@ export async function PATCH(
 
     // Load editable text (normalized text we index/search)
     const dt = await prisma.documentText.findUnique({
-      where: { documentId: id },
+      where: { documentId },
       select: { text: true },
     });
     if (!dt) {
@@ -99,11 +99,11 @@ export async function PATCH(
     // Persist atomically: update text + bump version
     const updated = await prisma.$transaction(async tx => {
       await tx.documentText.update({
-        where: { documentId: id },
+        where: { documentId },
         data: { text: updatedText },
       });
       const doc2 = await tx.document.update({
-        where: { id },
+        where: { id: documentId },
         data: { version: { increment: 1 } },
         select: { id: true, version: true },
       });
@@ -111,7 +111,7 @@ export async function PATCH(
     });
 
     return Response.json({
-      id,
+      id: documentId,
       version: updated.version,
       updatedText,
       changesApplied: changes.length,

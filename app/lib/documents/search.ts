@@ -133,7 +133,7 @@ export async function searchDocuments(
     docId: h.docId,
     name: h.name,
     snippetHtml: h.snippetHtml,
-    startIndex: h.start,
-    endIndex: h.end,
+    start: h.start,
+    end: h.end,
   }));
 }

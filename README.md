@@ -1,5 +1,89 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Database Setup
+
+This project uses PostgreSQL with Prisma as the ORM. Follow these steps to set up your database:
+
+### 1. Install and Start PostgreSQL
+
+Make sure you have PostgreSQL installed and running on your system.
+
+**On macOS (using Homebrew):**
+
+```bash
+brew install postgresql
+brew services start postgresql
+```
+
+**On Ubuntu/Debian:**
+
+```bash
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+```
+
+**On Windows:**
+Download and install from [postgresql.org](https://www.postgresql.org/download/windows/)
+
+### 2. Create a Database
+
+Connect to PostgreSQL and create a database for the project:
+
+```bash
+# Connect to PostgreSQL (default user is usually 'postgres')
+psql -U postgres
+
+# Create a database (replace 'sandstone_db' with your preferred name)
+CREATE DATABASE sandstone_db;
+
+# Exit PostgreSQL
+\q
+```
+
+### 3. Set Environment Variables
+
+Create a `.env` file in the root directory and add your database connection string:
+
+```bash
+# .env
+DATABASE_URL="postgresql://username:password@localhost:5432/sandstone_db"
+```
+
+Replace:
+
+- `username` with your PostgreSQL username (often `postgres`)
+- `password` with your PostgreSQL password
+- `sandstone_db` with your database name
+
+### 4. Run Prisma Commands
+
+Initialize and set up your database schema:
+
+```bash
+# Install dependencies
+npm install
+
+# Generate Prisma client
+npx prisma generate
+
+# Run database migrations
+npx prisma migrate deploy
+
+# (Optional) Seed your database if you have seed data
+npx prisma db seed
+```
+
+### 5. Verify Database Setup
+
+You can view your database in Prisma Studio:
+
+```bash
+npx prisma studio
+```
+
+This will open a web interface at `http://localhost:5555` where you can view and edit your data.
+
 ## Getting Started
 
 First, run the development server:
